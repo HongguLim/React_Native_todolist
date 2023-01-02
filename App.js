@@ -34,8 +34,7 @@ export default function App() {
     setText("");
   };
 
-  // Set Todo
-  // 투두의 카테고리를 누르면 그 카테고리만 나오게 출력
+  // Set Done
 
   return (
     <SafeAreaView style={styles.safearea}>
@@ -94,7 +93,9 @@ export default function App() {
             .map((item) => {
               return (
                 <View style={styles.card_container} key={item.id}>
-                  <Text style={styles.card_text}>{item.text}</Text>
+                  <Text style={styles.card_text}>
+                    &nbsp;&nbsp;&nbsp;&nbsp;{item.text}
+                  </Text>
                   <View style={styles.card_button}>
                     <AntDesign name="checksquare" size={24} color="black" />
                     <AntDesign name="form" size={24} color="black" />
