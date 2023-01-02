@@ -35,6 +35,30 @@ export default function App() {
   };
 
   // Set Done
+  // 완료 토글링
+  const setDone = (q) => {
+    // 1. id를 매개변수로 받는다.
+    // 2. id에 해당하는 배열의 요소를 찾는다.
+    // 3. 그 배열의 요소의 isDone값을 토글링 한 후에 setTodos.
+    // 얕은복사하기
+    const newTodos = [...todos];
+    const idx = newTodos.findIndex((todo) => {
+      return todo.id === q;
+    });
+    newTodos[idx].isDone = !newTodos[idx].isDone;
+    setTodos(newTodos);
+  };
+
+  //delete todo
+  //삭제 이모티콘 터치 시 해당 todo 삭제
+  // filter는 immutable메소드라서 item에 영향을 못미침 그래서 얕은복사를 하지 않아도 됨
+  const deleteTodo = function (id) {
+    setTodos((prev) => {
+      return prev.filter((item) => {
+        item.id !== id;
+      });
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safearea}>
@@ -93,13 +117,26 @@ export default function App() {
             .map((item) => {
               return (
                 <View style={styles.card_container} key={item.id}>
-                  <Text style={styles.card_text}>
+                  <Text
+                    style={{
+                      ...styles.card_text,
+                      textDecorationLine: item.isDone ? "line-through" : "none",
+                    }}
+                  >
                     &nbsp;&nbsp;&nbsp;&nbsp;{item.text}
                   </Text>
                   <View style={styles.card_button}>
-                    <AntDesign name="checksquare" size={24} color="black" />
-                    <AntDesign name="form" size={24} color="black" />
-                    <AntDesign name="delete" size={24} color="black" />
+                    <TouchableOpacity onPress={() => setDone(item.id)}>
+                      <AntDesign name="checksquare" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text>&nbsp;&nbsp;</Text>
+                    <TouchableOpacity onPress={() => deleteTodo(item.id)}>
+                      <AntDesign name="form" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text>&nbsp;&nbsp;</Text>
+                    <TouchableOpacity onPress={() => deleteTodo(item.id)}>
+                      <AntDesign name="delete" size={24} color="black" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               );
