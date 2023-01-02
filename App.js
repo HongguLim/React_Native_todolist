@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Br,
+  Alert,
 } from "react-native";
 import styled from "@emotion/native";
 import { AntDesign } from "@expo/vector-icons";
@@ -17,7 +18,8 @@ export default function App() {
   const [todos, setTodos] = useState([]);
   const [category, setCategory] = useState("js"); // js, react, ct
   const [text, setText] = useState("");
-  console.log("todos", todos);
+  const [editText, setEditText] = useState("");
+  console.log("edittext", editText);
 
   const newTodo = {
     id: Date.now(),
@@ -53,11 +55,48 @@ export default function App() {
   //삭제 이모티콘 터치 시 해당 todo 삭제
   // filter는 immutable메소드라서 item에 영향을 못미침 그래서 얕은복사를 하지 않아도 됨
   const deleteTodo = function (id) {
-    setTodos((prev) => {
-      return prev.filter((item) => {
-        item.id !== id;
-      });
+    Alert.alert("Todo 삭제", "정말 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+        onPress: () => {
+          return console.log("취소 클릭");
+        },
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: () => {
+          setTodos((prev) => {
+            return prev.filter((item) => {
+              item.id !== id;
+            });
+          });
+        },
+      },
+    ]);
+  };
+
+  //Edit todo
+  // isEdit값을 토글(setDone이랑 로직이 비슷함)
+  const setEdit = (q) => {
+    const newTodos = [...todos];
+    const idx = newTodos.findIndex((todo) => {
+      return todo.id === q;
     });
+    newTodos[idx].isEdit = !newTodos[idx].isEdit;
+    setTodos(newTodos);
+  };
+
+  const editTodo = (id) => {
+    // 1. id값을 받아서 해당 배열의 요소를 찾는다. idx찾기
+    // 2. todos[idx].text = editText
+    // 얕은복사
+    const newTodos = [...todos];
+    const idx = newTodos.findIndex((todo) => todo.id === id);
+    newTodos[idx].text = editText;
+    newTodos[idx].isEdit = false;
+    setTodos(newTodos);
   };
 
   return (
@@ -117,20 +156,37 @@ export default function App() {
             .map((item) => {
               return (
                 <View style={styles.card_container} key={item.id}>
-                  <Text
-                    style={{
-                      ...styles.card_text,
-                      textDecorationLine: item.isDone ? "line-through" : "none",
-                    }}
-                  >
-                    &nbsp;&nbsp;&nbsp;&nbsp;{item.text}
-                  </Text>
+                  {item.isEdit ? (
+                    <TextInput
+                      onSubmitEditing={() => {
+                        editTodo(todo.id);
+                      }}
+                      onChange={setEditText}
+                      value={editText}
+                      style={{ backgroundColor: "white", flex: 1 }}
+                    />
+                  ) : (
+                    <Text
+                      style={{
+                        ...styles.card_text,
+                        textDecorationLine: item.isDone
+                          ? "line-through"
+                          : "none",
+                      }}
+                    >
+                      &nbsp;&nbsp;&nbsp;&nbsp;{item.text}
+                    </Text>
+                  )}
+
                   <View style={styles.card_button}>
                     <TouchableOpacity onPress={() => setDone(item.id)}>
                       <AntDesign name="checksquare" size={24} color="black" />
                     </TouchableOpacity>
                     <Text>&nbsp;&nbsp;</Text>
-                    <TouchableOpacity onPress={() => deleteTodo(item.id)}>
+                    <TouchableOpacity
+                      //상태값 변화
+                      onPress={() => setEdit(item.id)}
+                    >
                       <AntDesign name="form" size={24} color="black" />
                     </TouchableOpacity>
                     <Text>&nbsp;&nbsp;</Text>
