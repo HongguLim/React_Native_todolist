@@ -12,7 +12,8 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/78b4b88e-70dd-4c2d-a720-93897df26d38"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -28,6 +29,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "78b4b88e-70dd-4c2d-a720-93897df26d38"
+      }
+    },
+    "owner": "honggulim",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }
