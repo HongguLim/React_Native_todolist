@@ -34,17 +34,38 @@ export default function App() {
     setText("");
   };
 
+  // Set Todo
+  // 투두의 카테고리를 누르면 그 카테고리만 나오게 출력
+
   return (
     <SafeAreaView style={styles.safearea}>
       <View>
         <View style={styles.header_container1}>
-          <TouchableOpacity style={styles.Button}>
+          <TouchableOpacity
+            style={{
+              ...styles.Button,
+              backgroundColor: category === "js" ? "#0FBCF9" : "grey",
+            }}
+            onPress={() => setCategory("js")}
+          >
             <Text style={styles.ButtonText}>JavaScript</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.Button}>
+          <TouchableOpacity
+            style={{
+              ...styles.Button,
+              backgroundColor: category === "react" ? "#0FBCF9" : "grey",
+            }}
+            onPress={() => setCategory("react")}
+          >
             <Text style={styles.ButtonText}>React</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.Button}>
+          <TouchableOpacity
+            style={{
+              ...styles.Button,
+              backgroundColor: category === "ct" ? "#0FBCF9" : "grey",
+            }}
+            onPress={() => setCategory("ct")}
+          >
             <Text style={styles.ButtonText}>Coding Test</Text>
           </TouchableOpacity>
         </View>
@@ -66,18 +87,22 @@ export default function App() {
       </View>
       <ScrollView>
         <View>
-          {todos.map((item) => {
-            return (
-              <View style={styles.card_container} key={item.id}>
-                <Text style={styles.card_text}>{item.text}</Text>
-                <View style={styles.card_button}>
-                  <AntDesign name="checksquare" size={24} color="black" />
-                  <AntDesign name="form" size={24} color="black" />
-                  <AntDesign name="delete" size={24} color="black" />
+          {todos
+            .filter((item) => {
+              return item.category === category;
+            })
+            .map((item) => {
+              return (
+                <View style={styles.card_container} key={item.id}>
+                  <Text style={styles.card_text}>{item.text}</Text>
+                  <View style={styles.card_button}>
+                    <AntDesign name="checksquare" size={24} color="black" />
+                    <AntDesign name="form" size={24} color="black" />
+                    <AntDesign name="delete" size={24} color="black" />
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
         </View>
       </ScrollView>
     </SafeAreaView>
