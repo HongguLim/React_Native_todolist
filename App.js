@@ -1,25 +1,26 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TextInput,
-  SafeAreaView,
-  StyleSheet,
-  TouchableOpacity,
-  Br,
   Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import styled from "@emotion/native";
 import { AntDesign } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function App() {
+  // delete todo
+  // 삭제 이모티콘 터치 시 해당 todo 삭제
   const [todos, setTodos] = useState([]);
-  const [category, setCategory] = useState("js"); // js, react, ct
+  const [category, setCategory] = useState(""); // js, react, ct
   const [text, setText] = useState("");
   const [editText, setEditText] = useState("");
-  console.log("edittext", editText);
 
   const newTodo = {
     id: Date.now(),
@@ -29,69 +30,41 @@ export default function App() {
     category,
   };
 
-  //Add Todo
-  // Input창에서 엔터 누르면 Todo 추가
   const addTodo = () => {
     setTodos((prev) => [...prev, newTodo]);
     setText("");
   };
 
-  // Set Done
-  // 완료 토글링
-  const setDone = (q) => {
-    // 1. id를 매개변수로 받는다.
-    // 2. id에 해당하는 배열의 요소를 찾는다.
-    // 3. 그 배열의 요소의 isDone값을 토글링 한 후에 setTodos.
-    // 얕은복사하기
-    const newTodos = [...todos];
-    const idx = newTodos.findIndex((todo) => {
-      return todo.id === q;
-    });
-    newTodos[idx].isDone = !newTodos[idx].isDone;
-    setTodos(newTodos);
-  };
-
-  //delete todo
-  //삭제 이모티콘 터치 시 해당 todo 삭제
-  // filter는 immutable메소드라서 item에 영향을 못미침 그래서 얕은복사를 하지 않아도 됨
-  const deleteTodo = function (id) {
+  const deleteTodo = (id) => {
+    // 1. id 값을 받아서 해당 배열 요소를 제외한 나머지를 새로운 배열로 받는다.
+    // 2. setTodos
     Alert.alert("Todo 삭제", "정말 삭제하시겠습니까?", [
       {
         text: "취소",
         style: "cancel",
-        onPress: () => {
-          return console.log("취소 클릭");
-        },
+        onPress: () => console.log("취소 클릭!"),
       },
       {
         text: "삭제",
         style: "destructive",
         onPress: () => {
-          setTodos((prev) => {
-            return prev.filter((item) => {
-              item.id !== id;
-            });
-          });
+          const newTodos = todos.filter((todo) => todo.id !== id);
+          setTodos(newTodos);
         },
       },
     ]);
   };
 
-  //Edit todo
-  // isEdit값을 토글(setDone이랑 로직이 비슷함)
-  const setEdit = (q) => {
+  const setEdit = (id) => {
     const newTodos = [...todos];
-    const idx = newTodos.findIndex((todo) => {
-      return todo.id === q;
-    });
+    const idx = newTodos.findIndex((todo) => todo.id === id);
     newTodos[idx].isEdit = !newTodos[idx].isEdit;
     setTodos(newTodos);
   };
 
   const editTodo = (id) => {
-    // 1. id값을 받아서 해당 배열의 요소를 찾는다. idx찾기
-    // 2. todos[idx].text = editText
-    // 얕은복사
+    // 1. id 값받아서 해당 배열의 요소를 찾는다. idx 찾기
+    // 2. todos[idx].text = editText;
     const newTodos = [...todos];
     const idx = newTodos.findIndex((todo) => todo.id === id);
     newTodos[idx].text = editText;
@@ -99,106 +72,134 @@ export default function App() {
     setTodos(newTodos);
   };
 
+  const setDone = (id) => {
+    // 1. id를 매개변수로 받는다.
+    // 2. id에 해당하는 배열의 요소를 찾는다.
+    // 3. 그 배열의 요소의 isDone 값을 토글링한 후에 setTodos.
+    const newTodos = [...todos];
+    const idx = newTodos.findIndex((todo) => todo.id === id);
+    newTodos[idx].isDone = !newTodos[idx].isDone;
+    setTodos(newTodos);
+  };
+
+  const setCat = async (cat) => {
+    console.log("cat:", cat);
+    setCategory(cat);
+    await AsyncStorage.setItem("category", cat);
+  };
+
+  useEffect(() => {
+    // 현재의 최신 todos를 AsyncStorage에 저장
+    const saveTodos = async () => {
+      await AsyncStorage.setItem("todos", JSON.stringify(todos));
+    };
+    if (todos.length > 0) saveTodos();
+  }, [todos]);
+
+  useEffect(() => {
+    const getData = async () => {
+      const resp_todos = await AsyncStorage.getItem("todos"); // todos 배열
+      const resp_cat = await AsyncStorage.getItem("category"); // undefined / null
+
+      setTodos(JSON.parse(resp_todos) ?? []);
+      setCategory(resp_cat ?? "js");
+    };
+    getData();
+  }, []);
+
   return (
     <SafeAreaView style={styles.safearea}>
-      <View>
-        <View style={styles.header_container1}>
+      <StatusBar style="auto" />
+      <View style={styles.container}>
+        <View style={styles.tabs}>
           <TouchableOpacity
+            onPress={() => setCat("js")}
             style={{
-              ...styles.Button,
+              ...styles.tab,
               backgroundColor: category === "js" ? "#0FBCF9" : "grey",
             }}
-            onPress={() => setCategory("js")}
           >
-            <Text style={styles.ButtonText}>JavaScript</Text>
+            <Text style={styles.tabText}>Javascript</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => setCat("react")}
             style={{
-              ...styles.Button,
+              ...styles.tab,
               backgroundColor: category === "react" ? "#0FBCF9" : "grey",
             }}
-            onPress={() => setCategory("react")}
           >
-            <Text style={styles.ButtonText}>React</Text>
+            <Text style={styles.tabText}>React</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => setCat("ct")}
             style={{
-              ...styles.Button,
+              ...styles.tab,
               backgroundColor: category === "ct" ? "#0FBCF9" : "grey",
             }}
-            onPress={() => setCategory("ct")}
           >
-            <Text style={styles.ButtonText}>Coding Test</Text>
+            <Text style={styles.tabText}>Coding Test</Text>
           </TouchableOpacity>
         </View>
-        <View
-          style={{
-            borderBottomColor: "black",
-            borderBottomWidth: 2,
-            width: "100%",
-          }}
-        >
+        <View style={styles.inputWrapper}>
           <TextInput
-            placeholder="&nbsp;&nbsp;&nbsp;&nbsp;Enter your task"
-            style={styles.header_input}
-            value={text}
-            onChangeText={setText}
             onSubmitEditing={addTodo}
-          ></TextInput>
+            onChangeText={setText}
+            value={text}
+            placeholder="Enter your task"
+            style={styles.input}
+          />
         </View>
-      </View>
-      <ScrollView>
-        <View>
-          {todos
-            .filter((item) => {
-              return item.category === category;
-            })
-            .map((item) => {
+        <ScrollView>
+          {todos.map((todo) => {
+            if (category === todo.category) {
               return (
-                <View style={styles.card_container} key={item.id}>
-                  {item.isEdit ? (
+                <View key={todo.id} style={styles.task}>
+                  {todo.isEdit ? (
                     <TextInput
-                      onSubmitEditing={() => {
-                        editTodo(todo.id);
-                      }}
-                      onChange={setEditText}
+                      onSubmitEditing={() => editTodo(todo.id)}
+                      onChangeText={setEditText}
                       value={editText}
                       style={{ backgroundColor: "white", flex: 1 }}
                     />
                   ) : (
                     <Text
                       style={{
-                        ...styles.card_text,
-                        textDecorationLine: item.isDone
+                        textDecorationLine: todo.isDone
                           ? "line-through"
                           : "none",
                       }}
                     >
-                      &nbsp;&nbsp;&nbsp;&nbsp;{item.text}
+                      {todo.text}
                     </Text>
                   )}
 
-                  <View style={styles.card_button}>
-                    <TouchableOpacity onPress={() => setDone(item.id)}>
+                  <View style={{ flexDirection: "row" }}>
+                    <TouchableOpacity onPress={() => setDone(todo.id)}>
                       <AntDesign name="checksquare" size={24} color="black" />
                     </TouchableOpacity>
-                    <Text>&nbsp;&nbsp;</Text>
-                    <TouchableOpacity
-                      //상태값 변화
-                      onPress={() => setEdit(item.id)}
-                    >
-                      <AntDesign name="form" size={24} color="black" />
+                    <TouchableOpacity onPress={() => setEdit(todo.id)}>
+                      <Feather
+                        style={{ marginLeft: 10 }}
+                        name="edit"
+                        size={24}
+                        color="black"
+                      />
                     </TouchableOpacity>
-                    <Text>&nbsp;&nbsp;</Text>
-                    <TouchableOpacity onPress={() => deleteTodo(item.id)}>
-                      <AntDesign name="delete" size={24} color="black" />
+                    <TouchableOpacity onPress={() => deleteTodo(todo.id)}>
+                      <AntDesign
+                        style={{ marginLeft: 10 }}
+                        name="delete"
+                        size={24}
+                        color="black"
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
               );
-            })}
-        </View>
-      </ScrollView>
+            }
+          })}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -207,55 +208,44 @@ const styles = StyleSheet.create({
   safearea: {
     flex: 1,
   },
-
-  header_container1: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-    alignItems: "center",
-    paddingTop: 20,
-    paddingBottom: 15,
-    borderBottomColor: "black",
-    borderBottomWidth: 2,
+  container: {
+    flex: 1,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
   },
-  Button: {
-    backgroundColor: "grey",
-    height: 50,
-    width: 100,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  ButtonText: {
-    color: "black",
-    fontWeight: "500",
-  },
-
-  header_button: {
-    backgroundColor: "grey",
-    padding: 40,
-    margin: 15,
-    height: 20,
-  },
-  header_input: {
-    margin: 15,
-    height: 40,
-    borderColor: "black",
-    borderWidth: 2,
-  },
-  card_container: {
-    backgroundColor: "lightgrey",
-    marginTop: 10,
-    height: 60,
+  tabs: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  tab: {
+    backgroundColor: "#0FBCF9",
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    width: "30%",
     alignItems: "center",
   },
-
-  card_button: { flexDirection: "row", marginRight: 10 },
-
-  card_text: {
-    fontWeight: "500",
-    margin: "auto",
-    fontSize: "17px",
+  tabText: {
+    fontWeight: "600",
+  },
+  inputWrapper: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginTop: 15,
+    marginBottom: 15,
+  },
+  input: {
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  task: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "#D9D9D9",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
 });
