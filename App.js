@@ -13,6 +13,21 @@ import { AntDesign } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Tabs from "./components/Tabs";
+import Todo from "./components/Todo";
+import {
+  onSnapshot,
+  query,
+  collection,
+  doc,
+  orderBy,
+  addDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { dbService } from "./firebase";
 
 export default function App() {
   // delete todo
@@ -23,19 +38,20 @@ export default function App() {
   const [editText, setEditText] = useState("");
 
   const newTodo = {
-    id: Date.now(),
+    // id: Date.now(),
     text,
     isDone: false,
     isEdit: false,
     category,
+    createdAt: Date.now(),
   };
 
-  const addTodo = () => {
-    setTodos((prev) => [...prev, newTodo]);
+  const addTodo = async () => {
+    await addDoc(collection(dbService, "todos"), newTodo);
     setText("");
   };
 
-  const deleteTodo = (id) => {
+  const deleteTodo = async (id) => {
     // 1. id 값을 받아서 해당 배열 요소를 제외한 나머지를 새로운 배열로 받는다.
     // 2. setTodos
     Alert.alert("Todo 삭제", "정말 삭제하시겠습니까?", [
@@ -47,45 +63,41 @@ export default function App() {
       {
         text: "삭제",
         style: "destructive",
-        onPress: () => {
-          const newTodos = todos.filter((todo) => todo.id !== id);
-          setTodos(newTodos);
+        onPress: async () => {
+          await deleteDoc(doc(dbService, "toods", id));
         },
       },
     ]);
   };
 
-  const setEdit = (id) => {
-    const newTodos = [...todos];
-    const idx = newTodos.findIndex((todo) => todo.id === id);
-    newTodos[idx].isEdit = !newTodos[idx].isEdit;
-    setTodos(newTodos);
+  const setEdit = async (id) => {
+    const idx = todos.findIndex((todo) => todo.id === id);
+    await updateDoc(doc(dbService, "todos", id), {
+      isEdit: todos[idx].isEdit,
+    });
   };
 
-  const editTodo = (id) => {
-    // 1. id 값받아서 해당 배열의 요소를 찾는다. idx 찾기
-    // 2. todos[idx].text = editText;
-    const newTodos = [...todos];
-    const idx = newTodos.findIndex((todo) => todo.id === id);
-    newTodos[idx].text = editText;
-    newTodos[idx].isEdit = false;
-    setTodos(newTodos);
+  const editTodo = async (id) => {
+    await updateDoc(doc(dbService, "todos", id), {
+      text: editText,
+      isEdit: false,
+    });
   };
 
-  const setDone = (id) => {
-    // 1. id를 매개변수로 받는다.
-    // 2. id에 해당하는 배열의 요소를 찾는다.
-    // 3. 그 배열의 요소의 isDone 값을 토글링한 후에 setTodos.
-    const newTodos = [...todos];
-    const idx = newTodos.findIndex((todo) => todo.id === id);
-    newTodos[idx].isDone = !newTodos[idx].isDone;
-    setTodos(newTodos);
+  const setDone = async (id) => {
+    const idx = todos.findIndex((todo) => todo.id === id);
+    await updateDoc(doc(dbService, "todos", id), {
+      isDone: todos[idx].isDone,
+    });
   };
 
   const setCat = async (cat) => {
     console.log("cat:", cat);
     setCategory(cat);
-    await AsyncStorage.setItem("category", cat);
+
+    await updateDoc(doc(dbService, "category", "currentCategory"), {
+      category: cat,
+    });
   };
 
   useEffect(() => {
@@ -97,49 +109,38 @@ export default function App() {
   }, [todos]);
 
   useEffect(() => {
-    const getData = async () => {
-      const resp_todos = await AsyncStorage.getItem("todos"); // todos 배열
-      const resp_cat = await AsyncStorage.getItem("category"); // undefined / null
+    // 1. onSnapshot APIfㅡㄹ 이용해서 todos 콜렉션에 변경이 생길때마다
+    // 2. todos 콜렉션 안의 모든 document를 불러와서 setTodos를 한다
+    const q = query(
+      collection(dbService, "todos"),
+      orderBy("createAt", "desc")
+    );
+    onSnapshot(q, (snapshot) => {
+      const newTodos = snapshot.docs.map((doc) => {
+        const newTodo = {
+          id: doc.id,
+          ...doc.data(), // doc.data() : { text, createdAt, ...  }
+        };
+        return newTodo;
+      });
+      setTodos(newTodos);
+    });
 
-      setTodos(JSON.parse(resp_todos) ?? []);
-      setCategory(resp_cat ?? "js");
+    // 마지막 카테고리
+    const getCategory = async () => {
+      const snapshot = await getDoc(
+        doc(dbService, "category", "currentCategory")
+      );
+      setCategory(snapshot.date().category);
     };
-    getData();
+    getCategory();
   }, []);
 
   return (
     <SafeAreaView style={styles.safearea}>
       <StatusBar style="auto" />
       <View style={styles.container}>
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            onPress={() => setCat("js")}
-            style={{
-              ...styles.tab,
-              backgroundColor: category === "js" ? "#0FBCF9" : "grey",
-            }}
-          >
-            <Text style={styles.tabText}>Javascript</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setCat("react")}
-            style={{
-              ...styles.tab,
-              backgroundColor: category === "react" ? "#0FBCF9" : "grey",
-            }}
-          >
-            <Text style={styles.tabText}>React</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setCat("ct")}
-            style={{
-              ...styles.tab,
-              backgroundColor: category === "ct" ? "#0FBCF9" : "grey",
-            }}
-          >
-            <Text style={styles.tabText}>Coding Test</Text>
-          </TouchableOpacity>
-        </View>
+        <Tabs setCat={setCat} category={category} />
         <View style={styles.inputWrapper}>
           <TextInput
             onSubmitEditing={addTodo}
@@ -153,48 +154,16 @@ export default function App() {
           {todos.map((todo) => {
             if (category === todo.category) {
               return (
-                <View key={todo.id} style={styles.task}>
-                  {todo.isEdit ? (
-                    <TextInput
-                      onSubmitEditing={() => editTodo(todo.id)}
-                      onChangeText={setEditText}
-                      value={editText}
-                      style={{ backgroundColor: "white", flex: 1 }}
-                    />
-                  ) : (
-                    <Text
-                      style={{
-                        textDecorationLine: todo.isDone
-                          ? "line-through"
-                          : "none",
-                      }}
-                    >
-                      {todo.text}
-                    </Text>
-                  )}
-
-                  <View style={{ flexDirection: "row" }}>
-                    <TouchableOpacity onPress={() => setDone(todo.id)}>
-                      <AntDesign name="checksquare" size={24} color="black" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setEdit(todo.id)}>
-                      <Feather
-                        style={{ marginLeft: 10 }}
-                        name="edit"
-                        size={24}
-                        color="black"
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteTodo(todo.id)}>
-                      <AntDesign
-                        style={{ marginLeft: 10 }}
-                        name="delete"
-                        size={24}
-                        color="black"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <Todo
+                  editTodo={editTodo}
+                  setDone={setDone}
+                  setEdit={setEdit}
+                  editText={editText}
+                  deleteTodo={deleteTodo}
+                  todo={todo}
+                  key={todo.id}
+                  setEditText={setEditText}
+                />
               );
             }
           })}
@@ -213,20 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
     paddingHorizontal: 20,
   },
-  tabs: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  tab: {
-    backgroundColor: "#0FBCF9",
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-    width: "30%",
-    alignItems: "center",
-  },
-  tabText: {
-    fontWeight: "600",
-  },
+
   inputWrapper: {
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -238,14 +194,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 10,
     paddingHorizontal: 20,
-  },
-  task: {
-    flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: "#D9D9D9",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
   },
 });
